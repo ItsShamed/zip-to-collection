@@ -16,6 +16,7 @@ import me.Shamed.osu.zip2osdb.utils.BinaryEditing;
 import javax.xml.bind.DatatypeConverter;
 import java.io.IOException;
 import java.util.List;
+import java.util.Locale;
 import java.util.logging.Logger;
 
 public abstract class OSDBWritableBeatmap extends Beatmap {
@@ -42,7 +43,7 @@ public abstract class OSDBWritableBeatmap extends Beatmap {
         BinaryEditing.writeCSUTF(outputStream, this.metadata.getArtistRomanized());
         BinaryEditing.writeCSUTF(outputStream, this.metadata.getTitleRomanized());
         BinaryEditing.writeCSUTF(outputStream, this.metadata.getVersion());
-        BinaryEditing.writeCSUTF(outputStream, DatatypeConverter.printHexBinary(this.md5));
+        BinaryEditing.writeCSUTF(outputStream, DatatypeConverter.printHexBinary(this.md5).toLowerCase(Locale.ROOT));
         BinaryEditing.writeCSUTF(outputStream, "");
         outputStream.write(GameMode.convertEKModeToByte(this.getGamemode()));
         outputStream.writeDouble(this.getDifficulty().getStars());
@@ -53,7 +54,7 @@ public abstract class OSDBWritableBeatmap extends Beatmap {
     }
 
     public String getStringHash(){
-        return DatatypeConverter.printHexBinary(this.md5);
+        return DatatypeConverter.printHexBinary(this.md5).toLowerCase(Locale.ROOT);
     }
 
 
