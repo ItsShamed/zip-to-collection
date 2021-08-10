@@ -7,15 +7,12 @@ import lt.ekgame.beatmap_analyzer.beatmap.ctb.CatchBeatmap;
 import lt.ekgame.beatmap_analyzer.beatmap.mania.ManiaBeatmap;
 import lt.ekgame.beatmap_analyzer.beatmap.osu.OsuBeatmap;
 import lt.ekgame.beatmap_analyzer.beatmap.taiko.TaikoBeatmap;
-import lt.ekgame.beatmap_analyzer.difficulty.Difficulty;
-import lt.ekgame.beatmap_analyzer.difficulty.DifficultyCalculator;
-import lt.ekgame.beatmap_analyzer.utils.Mods;
-import me.Shamed.osu.zip2osdb.Beatmapset;
 import me.Shamed.osu.zip2osdb.utils.BinaryEditing;
 
 import javax.xml.bind.DatatypeConverter;
 import java.io.IOException;
 import java.util.List;
+import java.util.ListIterator;
 import java.util.Locale;
 import java.util.logging.Logger;
 
@@ -36,7 +33,8 @@ public abstract class OSDBWritableBeatmap extends Beatmap {
 
     // See https://gist.github.com/ItsShamed/c3c6c83903653d72d1f499d7059fe185#beatmap-format
     public void writeToBinary(LittleEndianDataOutputStream outputStream) throws IOException {
-        log.info("Writing contents to output stream...");
+        log.info("Writing beatmap: " +this.metadata.getBeatmapId()+
+                "...");
 
         outputStream.writeInt(Integer.parseInt(this.metadata.getBeatmapId()));
         outputStream.writeInt(Integer.parseInt(this.metadata.getBeatmapSetId()));
@@ -57,7 +55,34 @@ public abstract class OSDBWritableBeatmap extends Beatmap {
         return DatatypeConverter.printHexBinary(this.md5).toLowerCase(Locale.ROOT);
     }
 
+    protected void finalizeObjects(List<? extends HitObject> objects) {
+        ListIterator<TimingPoint> timingIterator = timingPoints.listIterator();
+        ListIterator<? extends HitObject> objectIterator = objects.listIterator();
 
+        // find first parent point
+        TimingPoint parent = null;
+        while (parent == null || parent.isInherited())
+            parent = timingIterator.next();
+
+        while (true) {
+            TimingPoint current = timingIterator.hasNext() ? timingIterator.next() : null;
+            TimingPoint previous = timingPoints.get(timingIterator.previousIndex() - (current == null ? 0 : 1));
+            if (!previous.isInherited()) parent = previous;
+
+            while (objectIterator.hasNext()) {
+                HitObject object = objectIterator.next();
+                if (current == null || object.getStartTime() < current.getTimestamp()) {
+                    object.finalize(previous, parent, BeatmapConverter.makeNonWritable(this));
+                }
+                else {
+                    objectIterator.previous();
+                    break;
+                }
+            }
+
+            if (current == null) break;
+        }
+    }
 
     public static class BeatmapConverter{
 
@@ -112,7 +137,7 @@ public abstract class OSDBWritableBeatmap extends Beatmap {
                 );
             }
             else {
-                throw new IllegalStateException();
+                throw new IllegalStateException("Got: "+beatmap.getClass().getName());
             }
         }
 
