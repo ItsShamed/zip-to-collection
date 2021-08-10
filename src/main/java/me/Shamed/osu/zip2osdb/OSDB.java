@@ -1,5 +1,6 @@
+package me.Shamed.osu.zip2osdb;
+
 import com.google.common.io.LittleEndianDataOutputStream;
-import me.Shamed.osu.zip2osdb.MapsetPack;
 import me.Shamed.osu.zip2osdb.utils.BinaryEditing;
 
 import java.io.File;
@@ -35,7 +36,7 @@ public class OSDB {
 
     public void write() throws IOException, ParseException {
         if(!out.createNewFile()){
-            System.out.printf("%s already exists. Do you want to overwrite? (y/n): ");
+            System.out.printf("%s already exists. Do you want to overwrite? (y/n): ", out.getName());
             Scanner scanner = new Scanner(System.in);
             if(scanner.nextLine().equalsIgnoreCase("y")){
                 out.delete();
