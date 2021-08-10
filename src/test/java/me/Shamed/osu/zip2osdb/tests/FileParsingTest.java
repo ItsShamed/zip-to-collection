@@ -6,6 +6,8 @@ import lt.ekgame.beatmap_analyzer.parser.BeatmapException;
 import me.Shamed.osu.zip2osdb.Beatmapset;
 import me.Shamed.osu.zip2osdb.MapsetPack;
 import me.Shamed.osu.zip2osdb.beatmap.OSDBWritableBeatmap;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import javax.xml.bind.DatatypeConverter;
@@ -17,11 +19,13 @@ import java.util.Locale;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+@DisplayName("File parsing tests")
 public class FileParsingTest {
 
     private static final Logger log = Logger.getLogger("zip2osdb");
 
     @Test
+    @DisplayName("Single beatmapset (.osz) parsing test case")
     public void mapsetParsingTest() throws IOException, BeatmapException, NoSuchAlgorithmException, InterruptedException, URISyntaxException {
         log.config("java.util.logging.SimpleFormatter.format=[%1$tF %1$tT] [%4$s] [%2$s] %5$s %n");
         log.setLevel(Level.ALL);
@@ -51,6 +55,7 @@ public class FileParsingTest {
     }
 
     @Test
+    @DisplayName("Beatmap pack (.zip) parsing test")
     public void smallZipPackParsingTest() throws BeatmapException, IOException, NoSuchAlgorithmException, InterruptedException, RarException, URISyntaxException {
         log.config("java.util.logging.SimpleFormatter.format=[%1$tF %1$tT] [%4$s] [%2$s] %5$s %n");
 
@@ -72,6 +77,7 @@ public class FileParsingTest {
     }
 
     @Test
+    @DisplayName("Beatmap pack (.7z) parsing test")
     public void sevenZipPackParsingTest() throws RarException, BeatmapException, IOException, NoSuchAlgorithmException, InterruptedException, URISyntaxException {
         log.config("java.util.logging.SimpleFormatter.format=[%1$tF %1$tT] [%4$s] [%2$s] %5$s %n");
         MapsetPack pack = new MapsetPack(this.getClass().getResource("/MapPacks/Beatmap Pack #1054.7z").toURI().getPath());
@@ -92,6 +98,8 @@ public class FileParsingTest {
     }
 
     @Test
+    @Disabled
+    @DisplayName("Beatmap pack (.rar) parsing test")
     public void largeRarPackParsingTest() throws URISyntaxException, RarException, BeatmapException, IOException, NoSuchAlgorithmException, InterruptedException {
         log.config("java.util.logging.SimpleFormatter.format=[%1$tF %1$tT] [%4$s] [%2$s] %5$s %n");
         System.out.println(this.getClass().getResource("/MapPacks/TestBeatmapPack.rar").toURI().getPath());
