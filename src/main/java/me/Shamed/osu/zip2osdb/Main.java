@@ -36,7 +36,7 @@ public class Main {
             File zipFile = new File(args[0]);
             if(!zipFile.exists()){
                 System.err.printf("File %s does not exist.%n", args[0]);
-                System.exit(1);
+                return;
             }
 
             switch (detectArchiveStructure(zipFile)){
@@ -143,27 +143,53 @@ public class Main {
 
     private static ArchiveStructure detectArchiveStructure(File file) throws IOException {
 
-        ZipFile zipFile = new ZipFile(file);
-        int totalFiles=0;
-        int zipFiles=0;
-        int oszFiles=0;
-        Enumeration<? extends ZipEntry> entries = zipFile.entries();
-        ZipEntry entry = entries.nextElement();
-        while (entries.hasMoreElements()){
-            totalFiles+=1;
-            if(entry.getName().endsWith(".zip")||entry.getName().endsWith(".rar")||entry.getName().endsWith(".7z")){
-                zipFiles+=1;
+
+        if(file.getName().endsWith(".zip")){
+            ZipFile zipFile = new ZipFile(file);
+            int totalFiles = 0;
+            int zipFiles = 0;
+            int oszFiles = 0;
+            Enumeration<? extends ZipEntry> entries = zipFile.entries();
+            ZipEntry entry = entries.nextElement();
+            while (entries.hasMoreElements()) {
+                totalFiles += 1;
+                if (entry.getName().endsWith(".zip") || entry.getName().endsWith(".rar") || entry.getName().endsWith(".7z")) {
+                    zipFiles += 1;
+                } else if (entry.getName().endsWith(".osz")) {
+                    oszFiles += 1;
+                }
+                entry = entries.nextElement();
             }
-            else if(entry.getName().endsWith(".osz")){
-                oszFiles+=1;
+            if (zipFiles / totalFiles > .5) {
+                return ArchiveStructure.PACK_CONTAINER;
+            } else if (oszFiles / totalFiles > .5) {
+                return ArchiveStructure.PACK;
+            } else {
+                return ArchiveStructure.UNKNOWN;
             }
-            entry = entries.nextElement();
-        }
-        if(zipFiles/totalFiles>.5){
-            return ArchiveStructure.PACK_CONTAINER;
-        } else if(oszFiles/totalFiles>.5){
-            return ArchiveStructure.PACK;
-        } else{
+        }else if(file.getName().endsWith(".7z")){
+            SevenZFile zipFile = new SevenZFile(file);
+            int totalFiles = 0;
+            int zipFiles = 0;
+            int oszFiles = 0;
+            SevenZArchiveEntry entry = zipFile.getNextEntry();
+            while(entry!=null){
+                totalFiles += 1;
+                if (entry.getName().endsWith(".zip") || entry.getName().endsWith(".rar") || entry.getName().endsWith(".7z")) {
+                    zipFiles += 1;
+                } else if (entry.getName().endsWith(".osz")) {
+                    oszFiles += 1;
+                }
+                entry = zipFile.getNextEntry();
+            }
+            if (zipFiles / totalFiles > .5) {
+                return ArchiveStructure.PACK_CONTAINER;
+            } else if (oszFiles / totalFiles > .5) {
+                return ArchiveStructure.PACK;
+            } else {
+                return ArchiveStructure.UNKNOWN;
+            }
+        } else {
             return ArchiveStructure.UNKNOWN;
         }
 
