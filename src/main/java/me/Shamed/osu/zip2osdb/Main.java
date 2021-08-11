@@ -18,6 +18,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.net.URISyntaxException;
 import java.security.NoSuchAlgorithmException;
+import java.text.ParseException;
 import java.util.ArrayList;
 import java.util.Enumeration;
 import java.util.List;
@@ -28,12 +29,15 @@ import java.util.zip.ZipFile;
 public class Main{
 
     public static final Logger log = Logger.getLogger("zip2osdb");
-    private static final JFrame jFrame = new JFrame("osu! Beatmap Pack to Collection converter");
     private static final MainActionListener listener = new MainActionListener();
+    private static final JFrame jFrame = new JFrame("osu! Beatmap Pack to Collection converter");
     private static JTextField inputFileField;
     private static JTextField outputFileField;
+    private static JButton chooseInFileButton;
+    private static JButton chooseOutFileButton;
+    private static JButton convertButton;
 
-    public static void main(String[] args) throws BeatmapException, IOException, NoSuchAlgorithmException, InterruptedException, RarException, URISyntaxException {
+    public static void main(String[] args) throws BeatmapException, IOException, NoSuchAlgorithmException, InterruptedException, RarException, URISyntaxException, ParseException {
         log.config("java.util.logging.SimpleFormatter.format=[%1$tF %1$tT] [%4$s] [%2$s] %5$s %n");
 
         if(args.length==0){
@@ -144,6 +148,8 @@ public class Main{
 
             }
 
+        } else if(args.length==2){
+            run(args[0], args[1], false);
         }
 
     }
@@ -203,6 +209,62 @@ public class Main{
 
     }
 
+    private static void run(String inPath, String outPath, boolean gui) throws IOException, RarException, BeatmapException, NoSuchAlgorithmException, InterruptedException, ParseException {
+        File zipFile = new File(inPath);
+        OSDB collection = gui ? new OSDB(new File(outPath), jFrame) : new OSDB(new File(outPath));
+        switch (detectArchiveStructure(zipFile)){
+            case PACK:
+                MapsetPack mapsetPack = new MapsetPack(inPath);
+                collection.add(mapsetPack);
+                break;
+            case PACK_CONTAINER:
+                if (zipFile.getName().endsWith(".zip")){
+                    ZipFile packContainer = new ZipFile(zipFile);
+                    Enumeration<? extends ZipEntry> entries = packContainer.entries();
+                    ZipEntry entry = entries.nextElement();
+                    while(entries.hasMoreElements()){
+                        File packFile = new File(System.getProperty("java.io.tmpdir")+entry.getName());
+                        if(!packFile.createNewFile()){
+                            packFile.delete();
+                            packFile.createNewFile();
+                        }
+                        FileOutputStream os = new FileOutputStream(packFile);
+                        IOUtils.copy(packContainer.getInputStream(entry), os);
+                        os.close();
+                        collection.add(new MapsetPack(System.getProperty("java.io.tmpdir")+entry.getName()));
+                        packFile.delete();
+                        entry = entries.nextElement();
+                    }
+                } else if(zipFile.getName().endsWith(".7z")){
+                    SevenZFile packContainer = new SevenZFile(zipFile);
+                    SevenZArchiveEntry entry = packContainer.getNextEntry();
+                    while (entry!=null){
+                        File packFile = new File(System.getProperty("java.io.tmpdir")+entry.getName());
+                        if(!packFile.createNewFile()){
+                            packFile.delete();
+                            packFile.createNewFile();
+                        }
+                        FileOutputStream os = new FileOutputStream(packFile);
+                        IOUtils.copy(packContainer.getInputStream(entry), os);
+                        os.close();
+                        collection.add(new MapsetPack(System.getProperty("java.io.tmpdir")+entry.getName()));
+                        packFile.delete();
+                        entry = packContainer.getNextEntry();
+                    }
+                } else {
+                    System.err.println("Unknown archive format.");
+                    return;
+                }
+                break;
+
+            case UNKNOWN:
+                System.err.println("Can't determine the structure of the archive.");
+                return;
+
+        }
+        collection.write();
+    }
+
     private static void buildGui(){
 
         try {
@@ -222,7 +284,7 @@ public class Main{
         inputFileGroup.setBorder(border);
         inputFileGroup.setLayout(new FlowLayout());
         inputFileField = new JTextField(20);
-        JButton chooseInFileButton = new JButton("Choose...");
+        chooseInFileButton = new JButton("Choose...");
         chooseInFileButton.setActionCommand("chooseInput");
         chooseInFileButton.addActionListener(listener);
         inputFileGroup.add(inputFileField);
@@ -233,7 +295,7 @@ public class Main{
         outputFileGroup.setBorder(border1);
         outputFileGroup.setLayout(new FlowLayout());
         outputFileField = new JTextField(20);
-        JButton chooseOutFileButton = new JButton("Choose...");
+        chooseOutFileButton = new JButton("Choose...");
         chooseOutFileButton.setActionCommand("chooseOutput");
         chooseOutFileButton.addActionListener(listener);
         outputFileGroup.add(outputFileField);
@@ -245,7 +307,9 @@ public class Main{
         inputPanel.add(outputFileGroup);
 
         JPanel bottom = new JPanel();
-        JButton convertButton = new JButton("Convert");
+        convertButton = new JButton("Convert");
+        convertButton.setActionCommand("run");
+        convertButton.addActionListener(listener);
         bottom.add(convertButton);
 
 
@@ -286,6 +350,39 @@ public class Main{
                         outputFileField.setText(outputFileChooser.getSelectedFile().getPath()+".osdb");
                     }
                 }
+            } else if(e.getActionCommand().equalsIgnoreCase("run")){
+
+                if((inputFileField.getText().equalsIgnoreCase("")||outputFileField.getText().equalsIgnoreCase(""))
+                        ||(new File(inputFileField.getText()).isDirectory()||new File(outputFileField.getText()).isDirectory())){
+                    JOptionPane.showMessageDialog(jFrame, "Invalid path for input/output file", "Error",
+                            JOptionPane.ERROR_MESSAGE);
+                    return;
+                }
+                chooseInFileButton.setEnabled(false);
+                chooseOutFileButton.setEnabled(false);
+                inputFileField.setEnabled(false);
+                outputFileField.setEnabled(false);
+                convertButton.setEnabled(false);
+                jFrame.setDefaultCloseOperation(JFrame.DO_NOTHING_ON_CLOSE);
+                try {
+                    run(inputFileField.getText(), outputFileField.getText(), true);
+                }catch (Exception ex){
+                    ex.printStackTrace();
+                    StringBuilder stack = new StringBuilder();
+                    stack.append(ex.getMessage()+"\n\n");
+                    for (StackTraceElement element : ex.getStackTrace()){
+                        stack.append(element.toString()+"\n");
+                    }
+                    JOptionPane.showMessageDialog(jFrame, stack.toString(), "Unexpected error",
+                            JOptionPane.ERROR_MESSAGE);
+                }
+                jFrame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+                chooseInFileButton.setEnabled(true);
+                chooseOutFileButton.setEnabled(true);
+                inputFileField.setEnabled(true);
+                outputFileField.setEnabled(true);
+                convertButton.setEnabled(true);
+
             }
         }
     }
