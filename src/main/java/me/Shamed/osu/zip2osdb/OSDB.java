@@ -3,6 +3,7 @@ package me.Shamed.osu.zip2osdb;
 import com.google.common.io.LittleEndianDataOutputStream;
 import me.Shamed.osu.zip2osdb.utils.BinaryEditing;
 
+import javax.swing.*;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -19,11 +20,19 @@ public class OSDB {
     private final List<MapsetPack> packs;
     private final Date creationDate;
     private String lastEditor;
+    private JFrame jFrame;
 
     public OSDB(File file){
         this.out = file;
         this.packs = new ArrayList<>();
         this.creationDate=new Date();
+    }
+
+    public OSDB(File file, JFrame jFrame){
+        this.out = file;
+        this.packs = new ArrayList<>();
+        this.creationDate=new Date();
+        this.jFrame=jFrame;
     }
 
     public void add(MapsetPack pack){
@@ -36,14 +45,29 @@ public class OSDB {
 
     public void write() throws IOException, ParseException {
         if(!out.createNewFile()){
-            System.out.printf("%s already exists. Do you want to overwrite? (y/n): ", out.getName());
-            Scanner scanner = new Scanner(System.in);
-            if(scanner.nextLine().equalsIgnoreCase("y")){
-                out.delete();
-                out.createNewFile();
-            } else{
-                System.exit(0);
+            if (jFrame==null){
+                System.out.printf("%s already exists. Do you want to overwrite? (y/n): ", out.getName());
+                Scanner scanner = new Scanner(System.in);
+                if (scanner.nextLine().equalsIgnoreCase("y")) {
+                    out.delete();
+                    out.createNewFile();
+                } else {
+                    System.exit(0);
+                }
             }
+            else{
+                int r = JOptionPane.showConfirmDialog(jFrame, "File already exists, do you want to overwrite?",
+                        "File overwrite", JOptionPane.YES_NO_OPTION);
+
+                if(r==JOptionPane.YES_OPTION){
+                    out.delete();
+                    out.createNewFile();
+                }
+                else{
+                    return;
+                }
+            }
+
             LittleEndianDataOutputStream outputStream = new LittleEndianDataOutputStream(new FileOutputStream(this.out));
             BinaryEditing.writeCSUTF(outputStream, this.version);
             outputStream.writeDouble(BinaryEditing.convertToOADate(creationDate));

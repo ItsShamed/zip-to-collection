@@ -8,6 +8,11 @@ import org.apache.commons.compress.archivers.sevenz.SevenZFile;
 import org.apache.commons.io.IOUtils;
 
 import javax.swing.*;
+import javax.swing.border.TitledBorder;
+import javax.swing.filechooser.FileFilter;
+import java.awt.*;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -20,13 +25,15 @@ import java.util.logging.Logger;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 
-public class Main {
+public class Main{
 
     public static final Logger log = Logger.getLogger("zip2osdb");
-    public JFrame jFrame;
+    private static final JFrame jFrame = new JFrame("osu! Beatmap Pack to Collection converter");
+    private static final MainActionListener listener = new MainActionListener();
+    private static JTextField inputFileField;
+    private static JTextField outputFileField;
 
     public static void main(String[] args) throws BeatmapException, IOException, NoSuchAlgorithmException, InterruptedException, RarException, URISyntaxException {
-
         log.config("java.util.logging.SimpleFormatter.format=[%1$tF %1$tT] [%4$s] [%2$s] %5$s %n");
 
         if(args.length==0){
@@ -132,7 +139,7 @@ public class Main {
 
                 case UNKNOWN:
                 default:
-                    System.err.println("Can't determine the structure of the archive.");
+                    System.err.println("Can't determine the str(ucture of the archive.");
                     return;
 
             }
@@ -198,11 +205,115 @@ public class Main {
 
     private static void buildGui(){
 
+        try {
+            UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
+        }catch(Exception ex) {
+            ex.printStackTrace();
+        }
+
+        jFrame.setSize(400, 200);
+        jFrame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+
+        JPanel inputPanel = new JPanel();
+        inputPanel.setLayout(new BoxLayout(inputPanel, BoxLayout.PAGE_AXIS));
+
+        JPanel inputFileGroup = new JPanel();
+        TitledBorder border = BorderFactory.createTitledBorder("Input Archive");
+        inputFileGroup.setBorder(border);
+        inputFileGroup.setLayout(new FlowLayout());
+        inputFileField = new JTextField(20);
+        JButton chooseInFileButton = new JButton("Choose...");
+        chooseInFileButton.setActionCommand("chooseInput");
+        chooseInFileButton.addActionListener(listener);
+        inputFileGroup.add(inputFileField);
+        inputFileGroup.add(chooseInFileButton);
+
+        JPanel outputFileGroup = new JPanel();
+        TitledBorder border1 = BorderFactory.createTitledBorder("Output .osdb");
+        outputFileGroup.setBorder(border1);
+        outputFileGroup.setLayout(new FlowLayout());
+        outputFileField = new JTextField(20);
+        JButton chooseOutFileButton = new JButton("Choose...");
+        chooseOutFileButton.setActionCommand("chooseOutput");
+        chooseOutFileButton.addActionListener(listener);
+        outputFileGroup.add(outputFileField);
+        outputFileGroup.add(chooseOutFileButton);
+
+
+
+        inputPanel.add(inputFileGroup);
+        inputPanel.add(outputFileGroup);
+
+        JPanel bottom = new JPanel();
+        JButton convertButton = new JButton("Convert");
+        bottom.add(convertButton);
+
+
+
+
+        jFrame.getContentPane().add(BorderLayout.CENTER, inputPanel);
+        jFrame.getContentPane().add(BorderLayout.SOUTH, bottom);
+        jFrame.setVisible(true);
     }
 
     private enum ArchiveStructure{
         PACK_CONTAINER,
         PACK,
         UNKNOWN
+    }
+
+    private static class MainActionListener implements ActionListener{
+
+        public MainActionListener(){}
+
+        @Override
+        public void actionPerformed(ActionEvent e) {
+            if(e.getActionCommand().equalsIgnoreCase("chooseInput")){
+                final JFileChooser inputFileChooser = new JFileChooser();
+                inputFileChooser.addChoosableFileFilter(new OpenFileFilter(".zip","Zip Archive"));
+                inputFileChooser.addChoosableFileFilter(new OpenFileFilter(".7z","7Zip Archive"));
+                int r = inputFileChooser.showOpenDialog(jFrame);
+                if(r==JFileChooser.APPROVE_OPTION){
+                    inputFileField.setText(inputFileChooser.getSelectedFile().getPath());
+                }
+            } else if (e.getActionCommand().equalsIgnoreCase("chooseOutput")){
+                final JFileChooser outputFileChooser = new JFileChooser();
+                int r = outputFileChooser.showSaveDialog(jFrame);
+                if(r==JFileChooser.APPROVE_OPTION){
+                    if(outputFileChooser.getSelectedFile().getName().endsWith(".osdb")) {
+                        outputFileField.setText(outputFileChooser.getSelectedFile().getPath());
+                    }else {
+                        outputFileField.setText(outputFileChooser.getSelectedFile().getPath()+".osdb");
+                    }
+                }
+            }
+        }
+    }
+
+    private static class OpenFileFilter extends FileFilter {
+
+        String description = "";
+        String fileExt = "";
+
+        public OpenFileFilter(String extension) {
+            fileExt = extension;
+        }
+
+        public OpenFileFilter(String extension, String typeDescription) {
+            fileExt = extension;
+            this.description = typeDescription;
+        }
+
+        @Override
+        public boolean accept(File f) {
+            if (f.isDirectory())
+                return true;
+            return (f.getName().toLowerCase().endsWith(fileExt));
+        }
+
+        @Override
+        public String getDescription() {
+            return description;
+        }
     }
 }
