@@ -45,6 +45,7 @@ public class Main{
     private static JButton chooseInFileButton;
     private static JButton chooseOutFileButton;
     private static JButton convertButton;
+    private static JProgressBar progressBar;
 
     public static void main(String[] args) throws BeatmapException, IOException, NoSuchAlgorithmException, InterruptedException, RarException, URISyntaxException, ParseException {
 
@@ -189,9 +190,11 @@ public class Main{
                 entry = entries.nextElement();
             }
             log.debug(String.format("Total files: %s\n.osz files:%s\nZIP Files:%s", totalFiles, oszFiles, zipFiles));
-            if (zipFiles / totalFiles > .5) {
+            log.debug("osz ratio: " + (((float) oszFiles) / totalFiles));
+            log.debug("zip ratio: " + (((float) zipFiles) / totalFiles));
+            if (((float) zipFiles) / totalFiles > .5) {
                 return ArchiveStructure.PACK_CONTAINER;
-            } else if (oszFiles / totalFiles > .5) {
+            } else if (((float) oszFiles) / totalFiles > .5) {
                 return ArchiveStructure.PACK;
             } else {
                 return ArchiveStructure.UNKNOWN;
@@ -232,6 +235,7 @@ public class Main{
         log.debug("Opening " + inPath);
         File zipFile = new File(inPath);
         OSDB collection = gui ? new OSDB(new File(outPath), jFrame) : new OSDB(new File(outPath));
+        progressBar.setIndeterminate(true);
         switch (detectArchiveStructure(zipFile)) {
             case PACK:
                 log.debug("Input file is a map pack");
@@ -282,11 +286,14 @@ public class Main{
                 break;
 
             case UNKNOWN:
+                JOptionPane.showMessageDialog(jFrame, "Can't determine the structure of the archive.",
+                        "Parsing error", JOptionPane.ERROR_MESSAGE);
                 log.error("Can't determine the structure of the archive.");
                 return;
 
         }
-        collection.write();
+        progressBar.setIndeterminate(false);
+        collection.write(progressBar);
     }
 
     public static boolean isDebugging() {
@@ -306,10 +313,11 @@ public class Main{
             ex.printStackTrace();
         }
 
-        jFrame.setSize(400, 200);
+        jFrame.setSize(400, 250);
         jFrame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 
         JPanel inputPanel = new JPanel();
+        inputPanel.setBorder(BorderFactory.createEmptyBorder(5, 5, 5, 5));
         inputPanel.setLayout(new BoxLayout(inputPanel, BoxLayout.PAGE_AXIS));
 
         JPanel inputFileGroup = new JPanel();
@@ -331,15 +339,20 @@ public class Main{
         chooseOutFileButton = new JButton("Choose...");
         chooseOutFileButton.setActionCommand("chooseOutput");
         chooseOutFileButton.addActionListener(listener);
+        progressBar = new JProgressBar(0);
+        progressBar.setMaximumSize(new Dimension(325, 50));
+        progressBar.setValue(0);
+        progressBar.setEnabled(false);
         outputFileGroup.add(outputFileField);
         outputFileGroup.add(chooseOutFileButton);
 
 
-
         inputPanel.add(inputFileGroup);
         inputPanel.add(outputFileGroup);
+        inputPanel.add(progressBar);
 
         JPanel bottom = new JPanel();
+        bottom.setBorder(BorderFactory.createEmptyBorder(0, 50, 0, 50));
         convertButton = new JButton("Convert");
         convertButton.setActionCommand("run");
         convertButton.addActionListener(listener);
@@ -384,7 +397,7 @@ public class Main{
                     }
                 }
             } else if(e.getActionCommand().equalsIgnoreCase("run")){
-
+                Task task = new Task();
                 if((inputFileField.getText().equalsIgnoreCase("")||outputFileField.getText().equalsIgnoreCase(""))
                         ||(new File(inputFileField.getText()).isDirectory()||new File(outputFileField.getText()).isDirectory())){
                     JOptionPane.showMessageDialog(jFrame, "Invalid path for input/output file", "Error",
@@ -398,8 +411,9 @@ public class Main{
                 convertButton.setEnabled(false);
                 jFrame.setDefaultCloseOperation(JFrame.DO_NOTHING_ON_CLOSE);
                 try {
-                    run(inputFileField.getText(), outputFileField.getText(), true);
-                    JOptionPane.showMessageDialog(jFrame, "Conversion finished!", "Sucess", JOptionPane.INFORMATION_MESSAGE);
+                    progressBar.setEnabled(true);
+                    progressBar.setMaximum(100);
+                    task.execute();
                 }catch (Exception ex) {
                     if (ex instanceof CancellationException) {
                         log.warn("User cancelled operation.");
@@ -416,12 +430,7 @@ public class Main{
                                 JOptionPane.ERROR_MESSAGE);
                     }
                 }
-                jFrame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-                chooseInFileButton.setEnabled(true);
-                chooseOutFileButton.setEnabled(true);
-                inputFileField.setEnabled(true);
-                outputFileField.setEnabled(true);
-                convertButton.setEnabled(true);
+
 
             }
         }
@@ -451,6 +460,26 @@ public class Main{
         @Override
         public String getDescription() {
             return description;
+        }
+    }
+
+    private static class Task extends SwingWorker<Void, Void> {
+
+        @Override
+        protected Void doInBackground() throws Exception {
+            Main.run(inputFileField.getText(), outputFileField.getText(), true);
+            return null;
+        }
+
+        @Override
+        protected void done() {
+            progressBar.setEnabled(false);
+            jFrame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+            chooseInFileButton.setEnabled(true);
+            chooseOutFileButton.setEnabled(true);
+            inputFileField.setEnabled(true);
+            outputFileField.setEnabled(true);
+            convertButton.setEnabled(true);
         }
     }
 }

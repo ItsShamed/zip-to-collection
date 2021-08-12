@@ -11,9 +11,9 @@ import org.apache.commons.compress.archivers.sevenz.SevenZFile;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+import javax.swing.*;
 import java.io.*;
 import java.security.NoSuchAlgorithmException;
-import java.text.ParseException;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
@@ -130,6 +130,14 @@ public class MapsetPack {
         return total;
     }
 
+    public void writeToBinary(LittleEndianDataOutputStream outputStream, JProgressBar progressBar) throws IOException {
+        log.info(String.format("Writing map pack: %s", this.name));
+        for (Beatmapset beatmapset :
+                this.beatmapsets) {
+            beatmapset.writeToBinary(outputStream, progressBar);
+        }
+    }
+
     public void writeToBinary(LittleEndianDataOutputStream outputStream) throws IOException {
         log.info(String.format("Writing map pack: %s", this.name));
         for (Beatmapset beatmapset :
@@ -138,23 +146,13 @@ public class MapsetPack {
         }
     }
 
-    public void writeAsCollection(LittleEndianDataOutputStream outputStream) throws IOException {
+    public void writeAsCollection(LittleEndianDataOutputStream outputStream, JProgressBar progressBar) throws IOException {
         BinaryEditing.writeCSUTF(outputStream, this.name);
         outputStream.writeInt(0);
         outputStream.writeInt(computeTotalBeatmaps());
-        this.writeToBinary(outputStream);
+        this.writeToBinary(outputStream, progressBar);
         outputStream.writeInt(0);
 
-    }
-
-    public void writeAsPlainOSDB(LittleEndianDataOutputStream outputStream) throws IOException, ParseException {
-        this.creationDate=new Date();
-        BinaryEditing.writeCSUTF(outputStream, this.version);
-        outputStream.writeDouble(BinaryEditing.convertToOADate(creationDate));
-        BinaryEditing.writeCSUTF(outputStream, System.getProperty("user.name"));
-        outputStream.writeInt(1);
-        this.writeAsCollection(outputStream);
-        BinaryEditing.writeCSUTF(outputStream, "By Piotrekol");
     }
 
 }

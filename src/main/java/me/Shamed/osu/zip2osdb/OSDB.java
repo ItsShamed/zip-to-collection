@@ -1,6 +1,7 @@
 package me.Shamed.osu.zip2osdb;
 
 import com.google.common.io.LittleEndianDataOutputStream;
+import me.Shamed.osu.zip2osdb.beatmap.OSDBWritableBeatmap;
 import me.Shamed.osu.zip2osdb.utils.BinaryEditing;
 import org.apache.commons.compress.compressors.gzip.GzipCompressorOutputStream;
 import org.apache.commons.compress.compressors.gzip.GzipParameters;
@@ -45,6 +46,18 @@ public class OSDB {
         }
     }
 
+    public int computeTotalBeatmaps() {
+        int total = 0;
+        for (MapsetPack pack : packs) {
+            for (Beatmapset set : pack.getBeatmapsets()) {
+                for (OSDBWritableBeatmap beatmap : set.getBeatmaps()) {
+                    total += 1;
+                }
+            }
+        }
+        return total;
+    }
+
     public OSDB(File file, JFrame jFrame) throws IOException {
         this.out = file;
         this.packs = new ArrayList<>();
@@ -73,8 +86,11 @@ public class OSDB {
     }
 
     //TODO: Remove useless collection folder
-    public void write() throws IOException, ParseException {
+    public void write(JProgressBar progressBar) throws IOException, ParseException {
 
+        progressBar.setMaximum((computeTotalBeatmaps() + 3) * 2);
+        progressBar.setIndeterminate(false);
+        progressBar.setValue(computeTotalBeatmaps() + 3);
         // /tmp/collection/
         File osdbFolder = new File(System.getProperty("java.io.tmpdir") + "collection");
         if (osdbFolder.exists() && !osdbFolder.isDirectory()) {
@@ -83,6 +99,7 @@ public class OSDB {
         } else {
             osdbFolder.mkdir();
         }
+        progressBar.setValue(progressBar.getValue() + 1);
 
         // /tmp/collection/collection.osdb
         log.debug("Creating uncompressed .osdb file");
@@ -99,7 +116,7 @@ public class OSDB {
         uncompressedOutputStream.writeInt(1);
         for (MapsetPack pack :
                 this.packs) {
-            pack.writeAsCollection(uncompressedOutputStream);
+            pack.writeAsCollection(uncompressedOutputStream, progressBar);
         }
         BinaryEditing.writeCSUTF(uncompressedOutputStream, "By Piotrekol");
         uncompressedOutputStream.close();
@@ -119,6 +136,7 @@ public class OSDB {
         GzipCompressorOutputStream cOsdbStream = new GzipCompressorOutputStream(new FileOutputStream(compressedOsdb), gzipHeader);
         IOUtils.copy(uncompressedStream, cOsdbStream);
         cOsdbStream.close();
+        progressBar.setValue(progressBar.getValue() + 1);
         //
 
         // out.osdb
@@ -130,7 +148,10 @@ public class OSDB {
         uncompressedOsdb.delete();
         compressedOsdb.delete();
         osdbFolder.delete();
+        progressBar.setValue(progressBar.getValue() + 1);
         log.info("OSDB File written!!");
+        JOptionPane.showMessageDialog(jFrame, "Conversion finished!", "Success",
+                JOptionPane.INFORMATION_MESSAGE);
         //
 
     }

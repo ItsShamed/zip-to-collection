@@ -10,6 +10,7 @@ import org.apache.commons.io.IOUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+import javax.swing.*;
 import javax.xml.bind.DatatypeConverter;
 import java.io.*;
 import java.security.DigestInputStream;
@@ -154,14 +155,22 @@ public class Beatmapset {
             log.warn("Detected 0 beatmaps in set");
         }
         this.beatmaps=detectedMaps.toArray(new OSDBWritableBeatmap[detectedMaps.size()]);
-        if(!isJUnitTest()) oszFile.delete(); // LOOOL My own program was deleting its own classpath wth
+        if (!isJUnitTest()) oszFile.delete(); // LOOOL My own program was deleting its own classpath wth
     }
 
-    public void writeToBinary(LittleEndianDataOutputStream outputStream) throws IOException{
+    public void writeToBinary(LittleEndianDataOutputStream outputStream) throws IOException {
         log.debug(String.format("Writing beatmapset: %s...", this.fileName));
         for (OSDBWritableBeatmap writableBeatmap :
                 this.beatmaps) {
             writableBeatmap.writeToBinary(outputStream);
+        }
+    }
+
+    public void writeToBinary(LittleEndianDataOutputStream outputStream, JProgressBar progressBar) throws IOException {
+        log.debug(String.format("Writing beatmapset: %s...", this.fileName));
+        for (OSDBWritableBeatmap writableBeatmap :
+                this.beatmaps) {
+            writableBeatmap.writeToBinary(outputStream, progressBar);
         }
     }
 

@@ -11,6 +11,7 @@ import me.Shamed.osu.zip2osdb.utils.BinaryEditing;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+import javax.swing.*;
 import javax.xml.bind.DatatypeConverter;
 import java.io.IOException;
 import java.util.List;
@@ -48,11 +49,16 @@ public abstract class OSDBWritableBeatmap extends Beatmap {
         outputStream.writeDouble(this.getDifficulty().getStars());
     }
 
-    public byte[] getHash(){
+    public void writeToBinary(LittleEndianDataOutputStream outputStream, JProgressBar progressBar) throws IOException {
+        writeToBinary(outputStream);
+        progressBar.setValue(progressBar.getValue() + 1);
+    }
+
+    public byte[] getHash() {
         return this.md5;
     }
 
-    public String getStringHash(){
+    public String getStringHash() {
         return DatatypeConverter.printHexBinary(this.md5).toLowerCase(Locale.ROOT);
     }
 
