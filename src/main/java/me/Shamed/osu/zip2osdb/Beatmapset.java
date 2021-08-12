@@ -7,6 +7,8 @@ import lt.ekgame.beatmap_analyzer.parser.BeatmapParser;
 import me.Shamed.osu.zip2osdb.beatmap.OSDBWritableBeatmap;
 import org.apache.commons.compress.archivers.sevenz.SevenZArchiveEntry;
 import org.apache.commons.io.IOUtils;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import javax.xml.bind.DatatypeConverter;
 import java.io.*;
@@ -14,60 +16,59 @@ import java.security.DigestInputStream;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
-import java.util.logging.Logger;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 
 public class Beatmapset {
-    private static final Logger log = Logger.getLogger("zip2osdb");
+    private static final Logger log = LogManager.getLogger();
     private final String fileName;
     private OSDBWritableBeatmap[] beatmaps;
 
 
     public Beatmapset(ZipInputStream inputStream, ZipEntry oszEntry) throws IOException, NoSuchAlgorithmException, BeatmapException, InterruptedException {
 
-        this.fileName=oszEntry.getName();
-        log.info("Opening beatmapset: "+this.fileName);
-        log.info("Caching in tempdir...");
-        File oszFile = new File(System.getProperty("java.io.tmpdir")+oszEntry.getName());
-        log.info("Cached path: "+oszFile.getPath());
-        if(!oszFile.createNewFile()){
-            log.info("Apparently the file already exists, replacing...");
+        this.fileName = oszEntry.getName();
+        log.debug("Opening beatmapset: " + this.fileName);
+        log.debug("Caching in tempdir...");
+        File oszFile = new File(System.getProperty("java.io.tmpdir") + oszEntry.getName());
+        log.debug("Cached path: " + oszFile.getPath());
+        if (!oszFile.createNewFile()) {
+            log.debug("Apparently the file already exists, replacing...");
             oszFile.delete();
             oszFile.createNewFile();
         }
         oszFile.deleteOnExit();
 
-        log.info("Writing content...");
+        log.debug("Writing content...");
         try(OutputStream oszOut = new FileOutputStream(oszFile)){
             IOUtils.copy(inputStream, oszOut);
-            log.info("Cached file created");
+            log.debug("Cached file created");
         }
 
-        log.info("Reading cached file");
+        log.debug("Reading cached file");
 
         parseBeatmaps(oszFile);
     }
 
     public Beatmapset(InputStream sevenZipInputStream, SevenZArchiveEntry oszEntry) throws IOException, NoSuchAlgorithmException {
-        this.fileName=oszEntry.getName();
-        log.info("Opening beatmapset: "+this.fileName);
-        log.info("Caching in tempdir...");
-        File oszFile = new File(System.getProperty("java.io.tmpdir")+oszEntry.getName());
-        if(!oszFile.createNewFile()){
-            log.info("Apparently the file already exists, replacing...");
+        this.fileName = oszEntry.getName();
+        log.debug("Opening beatmapset: " + this.fileName);
+        log.debug("Caching in tempdir...");
+        File oszFile = new File(System.getProperty("java.io.tmpdir") + oszEntry.getName());
+        if (!oszFile.createNewFile()) {
+            log.debug("Apparently the file already exists, replacing...");
             oszFile.delete();
             oszFile.createNewFile();
         }
         oszFile.deleteOnExit();
 
-        log.info("Writing content...");
-        try(OutputStream oszOut = new FileOutputStream(oszFile)){
+        log.debug("Writing content...");
+        try (OutputStream oszOut = new FileOutputStream(oszFile)) {
             IOUtils.copy(sevenZipInputStream, oszOut);
-            log.info("Cached file created");
+            log.debug("Cached file created");
         }
 
-        log.info("Reading cached file");
+        log.debug("Reading cached file");
 
         parseBeatmaps(oszFile);
     }
@@ -92,20 +93,20 @@ public class Beatmapset {
 
         ZipEntry osuEntry = osz.getNextEntry();
         while (osuEntry!=null){
-            log.info("Entry: "+osuEntry.getName());
+            log.debug("Entry: " + osuEntry.getName());
             if(!osuEntry.isDirectory()){
                 if(osuEntry.getName().endsWith(".osu")){
                     BeatmapParser parser = new BeatmapParser();
-                    log.info(".osu file found, caching in tmpdir...");
+                    log.debug(".osu file found, caching in tmpdir...");
                     File beatmapFile = new File(System.getProperty("java.io.tmpdir")+osuEntry.getName());
                     if(!beatmapFile.createNewFile()){
-                        log.info("Replacing existing ");
+                        log.debug("Replacing existing ");
                         beatmapFile.delete();
                         beatmapFile.createNewFile();
                     }
 
 
-                    log.info("Computing MD5 checksum on writing...");
+                    log.debug("Computing MD5 checksum on writing...");
                     MessageDigest md = MessageDigest.getInstance("MD5");
                     DigestInputStream dis = new DigestInputStream(osz, md);
                     try(OutputStream osuOut = new FileOutputStream(beatmapFile)){
@@ -114,15 +115,15 @@ public class Beatmapset {
 
 
                     byte[] hash = md.digest();
-                    log.info("MD5: "+ DatatypeConverter.printHexBinary(hash));
+                    log.debug("MD5: " + DatatypeConverter.printHexBinary(hash));
 
-                    log.info("Parsing beatmap...");
+                    log.debug("Parsing beatmap...");
 
                     try{
                         Beatmap beatmap = parser.parse(beatmapFile);
                         if(beatmap!=null){
                             OSDBWritableBeatmap writableBeatmap = OSDBWritableBeatmap.BeatmapConverter.makeWritable(beatmap, hash);
-                            log.info("Beatmap added to set.");
+                            log.debug("Beatmap added to set.");
                             detectedMaps.add(writableBeatmap);
                         }else{
                             throw new BeatmapException("NullPointer");
@@ -131,14 +132,14 @@ public class Beatmapset {
 
 
                     }catch (BeatmapException e){
-                        log.warning("Failed to parse beatmap");
+                        log.warn("Failed to parse beatmap");
                     }
 
-                    log.info("Deleting cached map...");
+                    log.debug("Deleting cached map...");
                     if(beatmapFile.delete()){
-                        log.info("Deletion succeded...");
+                        log.debug("Deletion succeded...");
                     } else{
-                        log.warning("Failed to delete cache");
+                        log.warn("Failed to delete cache");
                     }
                     beatmapFile.deleteOnExit();
                 }
@@ -150,14 +151,14 @@ public class Beatmapset {
         }
 
         if (detectedMaps.isEmpty()){
-            log.warning("Detected 0 beatmap in set");
+            log.warn("Detected 0 beatmaps in set");
         }
         this.beatmaps=detectedMaps.toArray(new OSDBWritableBeatmap[detectedMaps.size()]);
         if(!isJUnitTest()) oszFile.delete(); // LOOOL My own program was deleting its own classpath wth
     }
 
     public void writeToBinary(LittleEndianDataOutputStream outputStream) throws IOException{
-        log.info(String.format("Writing beatmapset: %s...", this.fileName));
+        log.debug(String.format("Writing beatmapset: %s...", this.fileName));
         for (OSDBWritableBeatmap writableBeatmap :
                 this.beatmaps) {
             writableBeatmap.writeToBinary(outputStream);

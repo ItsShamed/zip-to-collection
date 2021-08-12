@@ -5,6 +5,8 @@ import me.Shamed.osu.zip2osdb.utils.BinaryEditing;
 import org.apache.commons.compress.compressors.gzip.GzipCompressorOutputStream;
 import org.apache.commons.compress.compressors.gzip.GzipParameters;
 import org.apache.commons.io.IOUtils;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import javax.swing.*;
 import java.io.File;
@@ -16,7 +18,7 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.Scanner;
-import java.util.logging.Logger;
+import java.util.concurrent.CancellationException;
 
 public class OSDB {
 
@@ -24,7 +26,7 @@ public class OSDB {
     private final File out;
     private final List<MapsetPack> packs;
     private final Date creationDate;
-    private final Logger log = Logger.getLogger("zip2osdb");
+    private final Logger log = LogManager.getLogger(Main.class);
     private JFrame jFrame;
 
     public OSDB(File file) throws IOException {
@@ -56,12 +58,13 @@ public class OSDB {
                 out.delete();
                 out.createNewFile();
             } else {
-                return;
+                throw new CancellationException("Conversion cancelled");
             }
         }
     }
 
     public void add(MapsetPack pack){
+        log.debug(String.format("Adding MapPack %s to osdb", pack.getName()));
         packs.add(pack);
     }
 
@@ -69,27 +72,22 @@ public class OSDB {
         return packs.toArray(new MapsetPack[packs.size()]);
     }
 
+    //TODO: Remove useless collection folder
     public void write() throws IOException, ParseException {
-        if(!out.createNewFile()){
-            if ((jFrame==null)||(!jFrame.isVisible())){
 
-            }
-            else{
-
-            }
-
-        }
-
-        File osdbFolder = new File(System.getProperty("java.io.tmpdir")+"collection");
-        if (osdbFolder.exists()&&!osdbFolder.isDirectory()){
+        // /tmp/collection/
+        File osdbFolder = new File(System.getProperty("java.io.tmpdir") + "collection");
+        if (osdbFolder.exists() && !osdbFolder.isDirectory()) {
             osdbFolder.delete();
             osdbFolder.mkdir();
-        } else{
+        } else {
             osdbFolder.mkdir();
         }
 
-        File uncompressedOsdb = new File(System.getProperty("java.io.tmpdir")+"collection/collection.osdb");
-        if(!uncompressedOsdb.createNewFile()){
+        // /tmp/collection/collection.osdb
+        log.debug("Creating uncompressed .osdb file");
+        File uncompressedOsdb = new File(System.getProperty("java.io.tmpdir") + "collection/collection.osdb");
+        if (!uncompressedOsdb.createNewFile()) {
             uncompressedOsdb.delete();
             uncompressedOsdb.createNewFile();
         }
@@ -105,10 +103,12 @@ public class OSDB {
         }
         BinaryEditing.writeCSUTF(uncompressedOutputStream, "By Piotrekol");
         uncompressedOutputStream.close();
+        //
 
-
-        File compressedOsdb = new File(System.getProperty("java.io.tmpdir")+" collection.osdb.gz");
-        if(!compressedOsdb.createNewFile()){
+        // /tmp/collection.osdb.gz
+        log.debug("Compressing raw .osdb");
+        File compressedOsdb = new File(System.getProperty("java.io.tmpdir") + " collection.osdb.gz");
+        if (!compressedOsdb.createNewFile()) {
             compressedOsdb.delete();
             compressedOsdb.createNewFile();
         }
@@ -119,7 +119,10 @@ public class OSDB {
         GzipCompressorOutputStream cOsdbStream = new GzipCompressorOutputStream(new FileOutputStream(compressedOsdb), gzipHeader);
         IOUtils.copy(uncompressedStream, cOsdbStream);
         cOsdbStream.close();
+        //
 
+        // out.osdb
+        log.debug(String.format("Saving final data to %s", out.getPath()));
         LittleEndianDataOutputStream outStream = new LittleEndianDataOutputStream(new FileOutputStream(out));
         BinaryEditing.writeCSUTF(outStream, "o!dm8");
         IOUtils.copy(new FileInputStream(compressedOsdb), outStream);
@@ -128,6 +131,7 @@ public class OSDB {
         compressedOsdb.delete();
         osdbFolder.delete();
         log.info("OSDB File written!!");
+        //
 
     }
 

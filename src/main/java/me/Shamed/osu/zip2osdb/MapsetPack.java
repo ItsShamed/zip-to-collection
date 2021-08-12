@@ -8,6 +8,8 @@ import lt.ekgame.beatmap_analyzer.parser.BeatmapException;
 import me.Shamed.osu.zip2osdb.utils.BinaryEditing;
 import org.apache.commons.compress.archivers.sevenz.SevenZArchiveEntry;
 import org.apache.commons.compress.archivers.sevenz.SevenZFile;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import java.io.*;
 import java.security.NoSuchAlgorithmException;
@@ -15,13 +17,12 @@ import java.text.ParseException;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
-import java.util.logging.Logger;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 
 public class MapsetPack {
 
-    private final Logger log = Logger.getLogger("zip2osdb");
+    private final Logger log = LogManager.getLogger();
 
     private final String version = "o!dm8";
     private final String name;
@@ -32,17 +33,18 @@ public class MapsetPack {
         this.name = filePath.split(File.pathSeparator)[filePath.split(File.pathSeparator).length-1].replaceAll("\\..{2,3}(.\\d{3})?$","");
 
         List<Beatmapset> mapsets = new ArrayList<>();
-        Logger log = Logger.getLogger("zip2osdb");
 
 
+        log.info("Searching for beatmaps...");
         File mappackFile = new File(filePath);
 
         if (!mappackFile.exists()){
-            System.err.printf("File %s not found.", filePath);
+            log.error(String.format("File %s not found.", filePath));
             System.exit(1);
         }
 
        if(mappackFile.getName().endsWith(".zip")){
+           log.debug("Detected ZIP archive");
            ZipInputStream zipIn = null;
            try{
                zipIn = new ZipInputStream(new FileInputStream(mappackFile));
@@ -64,6 +66,7 @@ public class MapsetPack {
            zipIn.close();
        }
        else if(mappackFile.getName().endsWith(".7z")){ // || mappackFile.getName().matches("\\.7z(.\\d{3})?$")
+           log.debug("Detected 7Zip archive");
            SevenZFile zipFile=null;
            try{
                zipFile = new SevenZFile(mappackFile);
@@ -85,6 +88,7 @@ public class MapsetPack {
 
         }
        else if(mappackFile.getName().endsWith(".rar")){
+           log.debug("Detected RAR archive");
            Archive mapPackRar = new Archive(new FileInputStream(mappackFile));
            FileHeader header = mapPackRar.nextFileHeader();
            while (header!=null){

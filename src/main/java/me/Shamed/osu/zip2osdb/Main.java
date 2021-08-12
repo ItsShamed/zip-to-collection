@@ -6,6 +6,12 @@ import me.Shamed.osu.zip2osdb.beatmap.OSDBWritableBeatmap;
 import org.apache.commons.compress.archivers.sevenz.SevenZArchiveEntry;
 import org.apache.commons.compress.archivers.sevenz.SevenZFile;
 import org.apache.commons.io.IOUtils;
+import org.apache.logging.log4j.Level;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import org.apache.logging.log4j.core.LoggerContext;
+import org.apache.logging.log4j.core.config.Configuration;
+import org.apache.logging.log4j.core.config.LoggerConfig;
 
 import javax.swing.*;
 import javax.swing.border.TitledBorder;
@@ -16,20 +22,23 @@ import java.awt.event.ActionListener;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.lang.management.ManagementFactory;
 import java.net.URISyntaxException;
 import java.security.NoSuchAlgorithmException;
 import java.text.ParseException;
 import java.util.ArrayList;
 import java.util.Enumeration;
 import java.util.List;
-import java.util.logging.Logger;
+import java.util.concurrent.CancellationException;
+import java.util.regex.Pattern;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 
 public class Main{
 
-    public static final Logger log = Logger.getLogger("zip2osdb");
+    public static final Logger log = LogManager.getLogger();
     private static final MainActionListener listener = new MainActionListener();
+    private final static Pattern debugPattern = Pattern.compile("-Xdebug|jdwp");
     private static final JFrame jFrame = new JFrame("osu! Beatmap Pack to Collection converter");
     private static JTextField inputFileField;
     private static JTextField outputFileField;
@@ -38,40 +47,46 @@ public class Main{
     private static JButton convertButton;
 
     public static void main(String[] args) throws BeatmapException, IOException, NoSuchAlgorithmException, InterruptedException, RarException, URISyntaxException, ParseException {
-        log.config("java.util.logging.SimpleFormatter.format=[%1$tF %1$tT] [%4$s] [%2$s] %5$s %n");
 
-        if(args.length==0){
-            buildGui();
+        if (isDebugging()) {
+            LoggerContext ctx = (LoggerContext) LogManager.getContext(false);
+            Configuration config = ctx.getConfiguration();
+            LoggerConfig loggerConfig = config.getLoggerConfig(LogManager.ROOT_LOGGER_NAME);
+            loggerConfig.setLevel(Level.DEBUG);
+            ctx.updateLoggers();
         }
-        else if(args.length==1){
+
+        if (args.length == 0) {
+            buildGui();
+        } else if (args.length == 1) {
             File zipFile = new File(args[0]);
-            if(!zipFile.exists()){
-                System.err.printf("File %s does not exist.%n", args[0]);
+            if (!zipFile.exists()) {
+                log.error(String.format("File %s does not exist.%n", args[0]));
                 return;
             }
 
             switch (detectArchiveStructure(zipFile)){
                 case PACK:
                     MapsetPack mapsetPack = new MapsetPack(args[0]);
-                    System.out.printf("Mapset pack %s:%n", mapsetPack.getName());
+                    log.info(String.format("Mapset pack %s:%n", mapsetPack.getName()));
                     for (Beatmapset set :
                             mapsetPack.getBeatmapsets()) {
-                        System.out.printf("     Beatmapset %s:%n", set.getFileName());
+                        log.info(String.format("     Beatmapset %s:%n", set.getFileName()));
                         for (OSDBWritableBeatmap beatmap : set.getBeatmaps()){
-                            System.out.printf("         Beatmap:%n" +
-                                              "             Title: %s%n" +
-                                              "             Artist: %s%n" +
-                                              "             Beatmap ID: %s%n" +
-                                              "             Beatmapset ID: %s%n" +
-                                              "             Difficulty name: %s%n" +
-                                              "             Difficulty rating: %4s%n",
+                            log.info(String.format("         Beatmap:%n" +
+                                            "             Title: %s%n" +
+                                            "             Artist: %s%n" +
+                                            "             Beatmap ID: %s%n" +
+                                            "             Beatmapset ID: %s%n" +
+                                            "             Difficulty name: %s%n" +
+                                            "             Difficulty rating: %4s%n",
                                     beatmap.getMetadata().getTitleRomanized(),
                                     beatmap.getMetadata().getArtistRomanized(),
                                     beatmap.getMetadata().getBeatmapId(),
                                     beatmap.getMetadata().getBeatmapSetId(),
                                     beatmap.getMetadata().getVersion(),
                                     beatmap.getDifficulty().getStars()
-                            );
+                            ));
                         }
                     }
                     break;
@@ -111,18 +126,18 @@ public class Main{
                             entry = packContainer.getNextEntry();
                         }
                     } else {
-                        System.err.println("Unknown archive format.");
+                        log.error("Unknown archive format.");
                         return;
                     }
 
 
                     for (MapsetPack mapsetPack1 : packs){
-                        System.out.printf("Mapset pack %s:%n", mapsetPack1.getName());
+                        log.info(String.format("Mapset pack %s:%n", mapsetPack1.getName()));
                         for (Beatmapset set :
                                 mapsetPack1.getBeatmapsets()) {
-                            System.out.printf("     Beatmapset %s:%n", set.getFileName());
+                            log.info(String.format("     Beatmapset %s:%n", set.getFileName()));
                             for (OSDBWritableBeatmap beatmap : set.getBeatmaps()){
-                                System.out.printf("         Beatmap:%n" +
+                                log.info(String.format("         Beatmap:%n" +
                                                 "             Title: %s%n" +
                                                 "             Artist: %s%n" +
                                                 "             Beatmap ID: %s%n" +
@@ -135,7 +150,7 @@ public class Main{
                                         beatmap.getMetadata().getBeatmapSetId(),
                                         beatmap.getMetadata().getVersion(),
                                         beatmap.getDifficulty().getStars()
-                                );
+                                ));
                             }
                         }
                     }
@@ -143,7 +158,7 @@ public class Main{
 
                 case UNKNOWN:
                 default:
-                    System.err.println("Can't determine the str(ucture of the archive.");
+                    log.error("Can't determine the str(ucture of the archive.");
                     return;
 
             }
@@ -156,7 +171,7 @@ public class Main{
 
     private static ArchiveStructure detectArchiveStructure(File file) throws IOException {
 
-
+        log.debug(String.format("Detecting archive structure for %s", file.getName()));
         if(file.getName().endsWith(".zip")){
             ZipFile zipFile = new ZipFile(file);
             int totalFiles = 0;
@@ -173,6 +188,7 @@ public class Main{
                 }
                 entry = entries.nextElement();
             }
+            log.debug(String.format("Total files: %s\n.osz files:%s\nZIP Files:%s", totalFiles, oszFiles, zipFiles));
             if (zipFiles / totalFiles > .5) {
                 return ArchiveStructure.PACK_CONTAINER;
             } else if (oszFiles / totalFiles > .5) {
@@ -195,6 +211,7 @@ public class Main{
                 }
                 entry = zipFile.getNextEntry();
             }
+            log.debug(String.format("Total files: %s\n.osz files:%s\nZIP Files:%s", totalFiles, oszFiles, zipFiles));
             if (zipFiles / totalFiles > .5) {
                 return ArchiveStructure.PACK_CONTAINER;
             } else if (oszFiles / totalFiles > .5) {
@@ -210,15 +227,21 @@ public class Main{
     }
 
     private static void run(String inPath, String outPath, boolean gui) throws IOException, RarException, BeatmapException, NoSuchAlgorithmException, InterruptedException, ParseException {
+
+        log.info("Using arguments: in:" + inPath + " \nout:" + outPath + " \ngui?:" + gui);
+        log.debug("Opening " + inPath);
         File zipFile = new File(inPath);
         OSDB collection = gui ? new OSDB(new File(outPath), jFrame) : new OSDB(new File(outPath));
-        switch (detectArchiveStructure(zipFile)){
+        switch (detectArchiveStructure(zipFile)) {
             case PACK:
+                log.debug("Input file is a map pack");
                 MapsetPack mapsetPack = new MapsetPack(inPath);
                 collection.add(mapsetPack);
                 break;
             case PACK_CONTAINER:
+                log.debug("Input file is a container for map packs");
                 if (zipFile.getName().endsWith(".zip")){
+                    log.debug("Detected ZIP Archive");
                     ZipFile packContainer = new ZipFile(zipFile);
                     Enumeration<? extends ZipEntry> entries = packContainer.entries();
                     ZipEntry entry = entries.nextElement();
@@ -236,6 +259,7 @@ public class Main{
                         entry = entries.nextElement();
                     }
                 } else if(zipFile.getName().endsWith(".7z")){
+                    log.debug("Detected 7Zip archive");
                     SevenZFile packContainer = new SevenZFile(zipFile);
                     SevenZArchiveEntry entry = packContainer.getNextEntry();
                     while (entry!=null){
@@ -252,24 +276,33 @@ public class Main{
                         entry = packContainer.getNextEntry();
                     }
                 } else {
-                    System.err.println("Unknown archive format.");
+                    log.error("Unknown archive format.");
                     return;
                 }
                 break;
 
             case UNKNOWN:
-                System.err.println("Can't determine the structure of the archive.");
+                log.error("Can't determine the structure of the archive.");
                 return;
 
         }
         collection.write();
     }
 
-    private static void buildGui(){
+    public static boolean isDebugging() {
+        for (String arg : ManagementFactory.getRuntimeMXBean().getInputArguments()) {
+            if (debugPattern.matcher(arg).find()) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static void buildGui() {
 
         try {
             UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
-        }catch(Exception ex) {
+        } catch (Exception ex) {
             ex.printStackTrace();
         }
 
@@ -367,15 +400,21 @@ public class Main{
                 try {
                     run(inputFileField.getText(), outputFileField.getText(), true);
                     JOptionPane.showMessageDialog(jFrame, "Conversion finished!", "Sucess", JOptionPane.INFORMATION_MESSAGE);
-                }catch (Exception ex){
-                    ex.printStackTrace();
-                    StringBuilder stack = new StringBuilder();
-                    stack.append(ex.getMessage()+"\n\n");
-                    for (StackTraceElement element : ex.getStackTrace()){
-                        stack.append(element.toString()+"\n");
+                }catch (Exception ex) {
+                    if (ex instanceof CancellationException) {
+                        log.warn("User cancelled operation.");
+                        JOptionPane.showMessageDialog(jFrame, "Conversion cancelled.", "Cancelled",
+                                JOptionPane.WARNING_MESSAGE);
+                    } else {
+                        ex.printStackTrace();
+                        StringBuilder stack = new StringBuilder();
+                        stack.append(ex.getMessage() + "\n\n");
+                        for (StackTraceElement element : ex.getStackTrace()) {
+                            stack.append(element.toString() + "\n");
+                        }
+                        JOptionPane.showMessageDialog(jFrame, stack.toString(), "Unexpected error",
+                                JOptionPane.ERROR_MESSAGE);
                     }
-                    JOptionPane.showMessageDialog(jFrame, stack.toString(), "Unexpected error",
-                            JOptionPane.ERROR_MESSAGE);
                 }
                 jFrame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
                 chooseInFileButton.setEnabled(true);

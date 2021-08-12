@@ -1,25 +1,26 @@
 package me.Shamed.osu.zip2osdb.beatmap;
 
 import com.google.common.io.LittleEndianDataOutputStream;
-import lt.ekgame.beatmap_analyzer.Gamemode;
 import lt.ekgame.beatmap_analyzer.beatmap.*;
 import lt.ekgame.beatmap_analyzer.beatmap.ctb.CatchBeatmap;
 import lt.ekgame.beatmap_analyzer.beatmap.mania.ManiaBeatmap;
 import lt.ekgame.beatmap_analyzer.beatmap.osu.OsuBeatmap;
 import lt.ekgame.beatmap_analyzer.beatmap.taiko.TaikoBeatmap;
+import me.Shamed.osu.zip2osdb.Beatmapset;
 import me.Shamed.osu.zip2osdb.utils.BinaryEditing;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import javax.xml.bind.DatatypeConverter;
 import java.io.IOException;
 import java.util.List;
 import java.util.ListIterator;
 import java.util.Locale;
-import java.util.logging.Logger;
 
 public abstract class OSDBWritableBeatmap extends Beatmap {
 
 
-    protected static final Logger log = Logger.getLogger("zip2osdb");
+    protected static final Logger log = LogManager.getLogger(Beatmapset.class);
     protected byte[] md5;
 
     protected OSDBWritableBeatmap(BeatmapGenerals generals, BeatmapEditorState editorState, BeatmapMetadata metadata, BeatmapDifficulties difficulties, List<BreakPeriod> breaks, List<TimingPoint> timingPoints) {
@@ -33,7 +34,7 @@ public abstract class OSDBWritableBeatmap extends Beatmap {
 
     // See https://gist.github.com/ItsShamed/c3c6c83903653d72d1f499d7059fe185#beatmap-format
     public void writeToBinary(LittleEndianDataOutputStream outputStream) throws IOException {
-        log.info("Writing beatmap: " +this.metadata.getBeatmapId()+
+        log.debug("Writing beatmap: " + this.metadata.getBeatmapId() +
                 "...");
 
         outputStream.writeInt(Integer.parseInt(this.metadata.getBeatmapId()));
@@ -87,7 +88,7 @@ public abstract class OSDBWritableBeatmap extends Beatmap {
     public static class BeatmapConverter{
 
         public static OSDBWritableBeatmap makeWritable(Beatmap beatmap, byte[] hash){
-            log.info("Making beatmap writable for to .osdb");
+            log.debug("Making beatmap writable for to .osdb");
             if(beatmap instanceof OsuBeatmap){
                 return new WritableOsuBeatmap(
                         beatmap.getGenerals(),
