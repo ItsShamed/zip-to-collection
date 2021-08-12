@@ -30,31 +30,34 @@ public class OSDB {
     public OSDB(File file) throws IOException {
         this.out = file;
         this.packs = new ArrayList<>();
-        this.creationDate=new Date();
-        System.out.printf("%s already exists. Do you want to overwrite? (y/n): ", out.getName());
-        Scanner scanner = new Scanner(System.in);
-        if (scanner.nextLine().equalsIgnoreCase("y")) {
-            out.delete();
-            out.createNewFile();
-        } else {
-            System.exit(0);
+        this.creationDate = new Date();
+        if (out.exists() && out.isFile()) {
+            System.out.printf("%s already exists. Do you want to overwrite? (y/n): ", out.getName());
+            Scanner scanner = new Scanner(System.in);
+            if (scanner.nextLine().equalsIgnoreCase("y")) {
+                out.delete();
+                out.createNewFile();
+            } else {
+                System.exit(0);
+            }
         }
     }
 
     public OSDB(File file, JFrame jFrame) throws IOException {
         this.out = file;
         this.packs = new ArrayList<>();
-        this.creationDate=new Date();
-        this.jFrame=jFrame;
-        int r = JOptionPane.showConfirmDialog(jFrame, "File already exists, do you want to overwrite?",
-                "File overwrite", JOptionPane.YES_NO_OPTION);
+        this.creationDate = new Date();
+        this.jFrame = jFrame;
+        if (out.exists() && out.isFile()) {
+            int r = JOptionPane.showConfirmDialog(jFrame, "File already exists, do you want to overwrite?",
+                    "File overwrite", JOptionPane.YES_NO_OPTION);
 
-        if(r==JOptionPane.YES_OPTION){
-            out.delete();
-            out.createNewFile();
-        }
-        else{
-            return;
+            if (r == JOptionPane.YES_OPTION) {
+                out.delete();
+                out.createNewFile();
+            } else {
+                return;
+            }
         }
     }
 
