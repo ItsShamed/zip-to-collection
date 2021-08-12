@@ -366,6 +366,7 @@ public class Main{
                 jFrame.setDefaultCloseOperation(JFrame.DO_NOTHING_ON_CLOSE);
                 try {
                     run(inputFileField.getText(), outputFileField.getText(), true);
+                    JOptionPane.showMessageDialog(jFrame, "Conversion finished!", "Sucess", JOptionPane.INFORMATION_MESSAGE);
                 }catch (Exception ex){
                     ex.printStackTrace();
                     StringBuilder stack = new StringBuilder();
