@@ -155,4 +155,11 @@ public class MapsetPack {
 
     }
 
+    public void writeAsCollection(LittleEndianDataOutputStream outputStream) throws IOException {
+        BinaryEditing.writeCSUTF(outputStream, this.name);
+        outputStream.writeInt(0);
+        outputStream.writeInt(computeTotalBeatmaps());
+        this.writeToBinary(outputStream);
+        outputStream.writeInt(0);
+    }
 }

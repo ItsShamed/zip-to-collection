@@ -156,5 +156,67 @@ public class OSDB {
 
     }
 
+    public void write() throws IOException, ParseException {
+
+        // /tmp/collection/
+        File osdbFolder = new File(System.getProperty("java.io.tmpdir") + "collection");
+        if (osdbFolder.exists() && !osdbFolder.isDirectory()) {
+            osdbFolder.delete();
+            osdbFolder.mkdir();
+        } else {
+            osdbFolder.mkdir();
+        }
+
+        // /tmp/collection/collection.osdb
+        log.debug("Creating uncompressed .osdb file");
+        File uncompressedOsdb = new File(System.getProperty("java.io.tmpdir") + "collection/collection.osdb");
+        if (!uncompressedOsdb.createNewFile()) {
+            uncompressedOsdb.delete();
+            uncompressedOsdb.createNewFile();
+        }
+
+        LittleEndianDataOutputStream uncompressedOutputStream = new LittleEndianDataOutputStream(new FileOutputStream(uncompressedOsdb));
+        BinaryEditing.writeCSUTF(uncompressedOutputStream, this.version);
+        uncompressedOutputStream.writeDouble(BinaryEditing.convertToOADate(creationDate));
+        BinaryEditing.writeCSUTF(uncompressedOutputStream, System.getProperty("user.name"));
+        uncompressedOutputStream.writeInt(1);
+        for (MapsetPack pack :
+                this.packs) {
+            pack.writeAsCollection(uncompressedOutputStream);
+        }
+        BinaryEditing.writeCSUTF(uncompressedOutputStream, "By Piotrekol");
+        uncompressedOutputStream.close();
+        //
+
+        // /tmp/collection.osdb.gz
+        log.debug("Compressing raw .osdb");
+        File compressedOsdb = new File(System.getProperty("java.io.tmpdir") + " collection.osdb.gz");
+        if (!compressedOsdb.createNewFile()) {
+            compressedOsdb.delete();
+            compressedOsdb.createNewFile();
+        }
+        FileInputStream uncompressedStream = new FileInputStream(uncompressedOsdb);
+        GzipParameters gzipHeader = new GzipParameters();
+        gzipHeader.setFilename("collection.osdb");
+        gzipHeader.setModificationTime(new Date().getTime());
+        GzipCompressorOutputStream cOsdbStream = new GzipCompressorOutputStream(new FileOutputStream(compressedOsdb), gzipHeader);
+        IOUtils.copy(uncompressedStream, cOsdbStream);
+        cOsdbStream.close();
+        //
+
+        // out.osdb
+        log.debug(String.format("Saving final data to %s", out.getPath()));
+        LittleEndianDataOutputStream outStream = new LittleEndianDataOutputStream(new FileOutputStream(out));
+        BinaryEditing.writeCSUTF(outStream, "o!dm8");
+        IOUtils.copy(new FileInputStream(compressedOsdb), outStream);
+        outStream.close();
+        uncompressedOsdb.delete();
+        compressedOsdb.delete();
+        osdbFolder.delete();
+        log.info("OSDB File written!!");
+        //
+
+    }
+
 
 }

@@ -235,7 +235,7 @@ public class Main{
         log.debug("Opening " + inPath);
         File zipFile = new File(inPath);
         OSDB collection = gui ? new OSDB(new File(outPath), jFrame) : new OSDB(new File(outPath));
-        progressBar.setIndeterminate(true);
+        if (gui) progressBar.setIndeterminate(true);
         switch (detectArchiveStructure(zipFile)) {
             case PACK:
                 log.debug("Input file is a map pack");
@@ -292,8 +292,12 @@ public class Main{
                 return;
 
         }
-        progressBar.setIndeterminate(false);
-        collection.write(progressBar);
+        if (gui) {
+            progressBar.setIndeterminate(false);
+            collection.write(progressBar);
+        } else {
+            collection.write();
+        }
     }
 
     public static boolean isDebugging() {
