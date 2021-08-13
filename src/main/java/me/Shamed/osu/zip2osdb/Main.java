@@ -39,7 +39,7 @@ public class Main{
     public static final Logger log = LogManager.getLogger();
     private static final MainActionListener listener = new MainActionListener();
     private final static Pattern debugPattern = Pattern.compile("-Xdebug|jdwp");
-    private static final JFrame jFrame = new JFrame("osu! Beatmap Pack to Collection converter");
+    private static JFrame jFrame;
     private static JTextField inputFileField;
     private static JTextField outputFileField;
     private static JButton chooseInFileButton;
@@ -48,6 +48,9 @@ public class Main{
     private static JProgressBar progressBar;
 
     public static void main(String[] args) throws BeatmapException, IOException, NoSuchAlgorithmException, InterruptedException, RarException, URISyntaxException, ParseException {
+
+        System.setProperty("apple.laf.useScreenMenuBar", "true");
+        System.setProperty("apple.awt.application.name", "zip2osdb");
 
         if (isDebugging()) {
             LoggerContext ctx = (LoggerContext) LogManager.getContext(false);
@@ -58,6 +61,7 @@ public class Main{
         }
 
         if (args.length == 0) {
+            jFrame = new JFrame("osu! Beatmap Pack to Collection converter");
             buildGui();
         } else if (args.length == 1) {
             File zipFile = new File(args[0]);
