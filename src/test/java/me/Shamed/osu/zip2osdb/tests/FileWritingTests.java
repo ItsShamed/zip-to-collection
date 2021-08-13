@@ -9,6 +9,8 @@ import me.Shamed.osu.zip2osdb.Beatmapset;
 import me.Shamed.osu.zip2osdb.MapsetPack;
 import me.Shamed.osu.zip2osdb.beatmap.OSDBWritableBeatmap;
 import org.apache.commons.codec.digest.DigestUtils;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -19,17 +21,15 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.net.URISyntaxException;
 import java.security.NoSuchAlgorithmException;
-import java.util.logging.Logger;
 
 @DisplayName("File writing tests")
 public class FileWritingTests {
 
-    private final Logger log = Logger.getLogger("zip2osdb");
+    private final Logger log = LogManager.getLogger();
 
     @Test
     @DisplayName("Converting a single beatmap into its OSDB format")
     public void SingleBeatmapSerializationTest() throws URISyntaxException, IOException, BeatmapException {
-        log.config("java.util.logging.SimpleFormatter.format=[%1$tF %1$tT] [%4$s] [%2$s] %5$s %n");
 
         File osuFile = new File(this.getClass().getResource("/Beatmaps/beatmap.osu").toURI().getPath());
         BeatmapParser parser = new BeatmapParser();
@@ -71,7 +71,6 @@ public class FileWritingTests {
     @DisplayName("Converting a MapPack into its OSDB equivalent")
     public void PackSerializationTest() throws URISyntaxException, RarException, BeatmapException, IOException,
                                                NoSuchAlgorithmException, InterruptedException {
-        log.config("java.util.logging.SimpleFormatter.format=[%1$tF %1$tT] [%4$s] [%2$s] %5$s %n");
         MapsetPack pack = new MapsetPack(this.getClass().getResource("/MapPacks/Beatmap Pack #1054.7z").toURI().getPath());
 
         ByteArrayOutputStream osdbSample = new ByteArrayOutputStream();
