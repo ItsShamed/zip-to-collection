@@ -1,0 +1,25 @@
+name: Publish release
+
+on:
+  release:
+    types:
+      - created
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v2
+      - name: Set up Java JDK
+        uses: actions/setup-java@2.2.0
+        with:
+          java-version: 8
+      - name: Package JAR
+        run: mvn package
+      - name: Upload JAR
+        uses: jasonetco/upload-to-release@master
+        with:
+          args: target/zip2osdb.jar application/java-archive
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -14,6 +14,7 @@
     </properties>
 
     <build>
+        <finalName>zip2osdb</finalName>
         <plugins>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
@@ -29,8 +30,22 @@
                     </archive>
                 </configuration>
             </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-scm-plugin</artifactId>
+                <version>1.11.2</version>
+                <configuration>
+                    <connectionType>connection</connectionType>
+                </configuration>
+            </plugin>
         </plugins>
     </build>
+
+    <scm>
+        <connection>scm:git:https://github.com/ItsShamed/zip-to-collection.git</connection>
+        <url>https://github.com/ItsShamed/zip-to-collection</url>
+        <tag>v${project.version}</tag>
+    </scm>
 
     <repositories>
         <repository>
