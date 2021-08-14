@@ -20,6 +20,7 @@ import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.lang.management.ManagementFactory;
@@ -34,6 +35,7 @@ import java.util.concurrent.CancellationException;
 import java.util.regex.Pattern;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
+import java.util.zip.ZipInputStream;
 
 public class Main{
 
@@ -99,21 +101,20 @@ public class Main{
                 case PACK_CONTAINER:
                     List<MapsetPack> packs = new ArrayList<>();
                     if (zipFile.getName().endsWith(".zip")){
-                        ZipFile packContainer = new ZipFile(zipFile);
-                        Enumeration<? extends ZipEntry> entries = packContainer.entries();
-                        ZipEntry entry = entries.nextElement();
-                        while(entries.hasMoreElements()){
+                        ZipInputStream packContainer = new ZipInputStream(new FileInputStream(zipFile));
+                        ZipEntry entry = packContainer.getNextEntry();
+                        while(entry!=null){
                             File packFile = new File(System.getProperty("java.io.tmpdir")+entry.getName());
                             if(!packFile.createNewFile()){
                                 packFile.delete();
                                 packFile.createNewFile();
                             }
                             FileOutputStream os = new FileOutputStream(packFile);
-                            IOUtils.copy(packContainer.getInputStream(entry), os);
+                            IOUtils.copy(packContainer, os);
                             os.close();
                             packs.add(new MapsetPack(System.getProperty("java.io.tmpdir")+entry.getName()));
                             packFile.delete();
-                            entry = entries.nextElement();
+                            entry = packContainer.getNextEntry();
                         }
                     } else if(zipFile.getName().endsWith(".7z")){
                         SevenZFile packContainer = new SevenZFile(zipFile);

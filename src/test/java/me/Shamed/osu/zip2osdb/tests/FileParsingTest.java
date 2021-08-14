@@ -6,8 +6,13 @@ import lt.ekgame.beatmap_analyzer.parser.BeatmapException;
 import me.Shamed.osu.zip2osdb.Beatmapset;
 import me.Shamed.osu.zip2osdb.MapsetPack;
 import me.Shamed.osu.zip2osdb.beatmap.OSDBWritableBeatmap;
+import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.apache.logging.log4j.core.LoggerContext;
+import org.apache.logging.log4j.core.config.Configuration;
+import org.apache.logging.log4j.core.config.LoggerConfig;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -23,6 +28,15 @@ import java.util.Locale;
 public class FileParsingTest {
 
     private static final Logger log = LogManager.getLogger();
+
+    @BeforeAll
+    public static void setupLog(){
+        LoggerContext ctx = (LoggerContext) LogManager.getContext(false);
+        Configuration config = ctx.getConfiguration();
+        LoggerConfig loggerConfig = config.getLoggerConfig(LogManager.ROOT_LOGGER_NAME);
+        loggerConfig.setLevel(Level.DEBUG);
+        ctx.updateLoggers();
+    }
 
     @Test
     @DisplayName("Single beatmapset (.osz) parsing test case")
