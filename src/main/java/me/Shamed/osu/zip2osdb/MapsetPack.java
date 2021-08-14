@@ -30,13 +30,13 @@ public class MapsetPack {
     private Date creationDate;
 
     public MapsetPack(String filePath) throws IOException, BeatmapException, NoSuchAlgorithmException, InterruptedException, RarException {
-        this.name = filePath.split(File.pathSeparator)[filePath.split(File.pathSeparator).length-1].replaceAll("\\..{2,3}(.\\d{3})?$","");
 
         List<Beatmapset> mapsets = new ArrayList<>();
 
 
         log.info("Searching for beatmaps...");
         File mappackFile = new File(filePath);
+        this.name = mappackFile.getName().replaceAll("\\..{2,3}(.\\d{3})?$","");
 
         if (!mappackFile.exists()){
             log.error(String.format("File %s not found.", filePath));

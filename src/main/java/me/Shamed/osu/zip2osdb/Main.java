@@ -27,6 +27,7 @@ import java.net.URISyntaxException;
 import java.security.NoSuchAlgorithmException;
 import java.text.ParseException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Enumeration;
 import java.util.List;
 import java.util.concurrent.CancellationException;
@@ -388,14 +389,18 @@ public class Main{
         public void actionPerformed(ActionEvent e) {
             if(e.getActionCommand().equalsIgnoreCase("chooseInput")){
                 final JFileChooser inputFileChooser = new JFileChooser();
-                inputFileChooser.addChoosableFileFilter(new OpenFileFilter(".zip","Zip Archive"));
-                inputFileChooser.addChoosableFileFilter(new OpenFileFilter(".7z","7Zip Archive"));
+                inputFileChooser.setAcceptAllFileFilterUsed(false);
+                inputFileChooser.addChoosableFileFilter(new OpenFileFilter(new String[]{".zip", ".7z"}, "Archive file (*.zip, *.7z)"));
+                inputFileChooser.addChoosableFileFilter(new OpenFileFilter(".zip","Zip Archive (*.zip)"));
+                inputFileChooser.addChoosableFileFilter(new OpenFileFilter(".7z","7Zip Archive (*.7z)"));
                 int r = inputFileChooser.showOpenDialog(jFrame);
                 if(r==JFileChooser.APPROVE_OPTION){
                     inputFileField.setText(inputFileChooser.getSelectedFile().getPath());
                 }
             } else if (e.getActionCommand().equalsIgnoreCase("chooseOutput")){
                 final JFileChooser outputFileChooser = new JFileChooser();
+                outputFileChooser.setAcceptAllFileFilterUsed(false);
+                outputFileChooser.addChoosableFileFilter(new OpenFileFilter(".osdb", "OSDB Collection (*.osdb)"));
                 int r = outputFileChooser.showSaveDialog(jFrame);
                 if(r==JFileChooser.APPROVE_OPTION){
                     if(outputFileChooser.getSelectedFile().getName().endsWith(".osdb")) {
@@ -447,14 +452,23 @@ public class Main{
     private static class OpenFileFilter extends FileFilter {
 
         String description = "";
-        String fileExt = "";
+        List<String> fileExt = new ArrayList<>();
 
         public OpenFileFilter(String extension) {
-            fileExt = extension;
+            fileExt.add(extension);
+        }
+
+        public OpenFileFilter(String[] extension){
+            fileExt.addAll(Arrays.asList(extension));
+        }
+
+        public OpenFileFilter(String[] extension, String typeDescription){
+            fileExt.addAll(Arrays.asList(extension));
+            this.description = typeDescription;
         }
 
         public OpenFileFilter(String extension, String typeDescription) {
-            fileExt = extension;
+            fileExt.add(extension);
             this.description = typeDescription;
         }
 
@@ -462,7 +476,11 @@ public class Main{
         public boolean accept(File f) {
             if (f.isDirectory())
                 return true;
-            return (f.getName().toLowerCase().endsWith(fileExt));
+            for (String ext :
+                    fileExt) {
+                if(f.getName().toLowerCase().endsWith(ext.toLowerCase())) return true;
+            }
+            return false;
         }
 
         @Override
